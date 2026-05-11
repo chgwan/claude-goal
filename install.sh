@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # install.sh — install the goal skill into Claude Code.
 # Usage: ./install.sh [--prefix <path>]
-#   --prefix  Where to install the skill (default: ~/config.d/claude/skills/goal)
+#   --prefix  Where to install the skill (default: ~/.claude/skills/goal)
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PREFIX="${HOME}/config.d/claude/skills/goal"
+PREFIX="${HOME}/.claude/skills/goal"
 
 # Parse args
 while [[ $# -gt 0 ]]; do
@@ -14,7 +14,7 @@ while [[ $# -gt 0 ]]; do
     --prefix) PREFIX="$2"; shift 2 ;;
     -h|--help)
       echo "Usage: $0 [--prefix <path>]"
-      echo "  Default prefix: ~/config.d/claude/skills/goal"
+      echo "  Default prefix: ~/.claude/skills/goal"
       exit 0
       ;;
     *) echo "unknown arg: $1" >&2; exit 1 ;;
@@ -45,18 +45,7 @@ sed -i "s|__SKILL_ROOT__|$ESCAPED_PREFIX|g" "$PREFIX/SKILL.md"
 
 echo "  Stamped paths in bin/goal and SKILL.md"
 
-# --- 3. Skill symlink ---
-mkdir -p "$CLAUDE_DIR/skills"
-if [ -L "$CLAUDE_DIR/skills/goal" ]; then
-  rm "$CLAUDE_DIR/skills/goal"
-elif [ -e "$CLAUDE_DIR/skills/goal" ]; then
-  echo "  WARNING: $CLAUDE_DIR/skills/goal exists and is not a symlink — skipping"
-  echo "  Remove it manually if you want the symlink."
-fi
-[ ! -e "$CLAUDE_DIR/skills/goal" ] && ln -s "$PREFIX" "$CLAUDE_DIR/skills/goal"
-echo "  Linked $CLAUDE_DIR/skills/goal → $PREFIX"
-
-# --- 4. Slash command ---
+# --- 3. Slash command ---
 mkdir -p "$COMMANDS_DIR"
 cat > "$COMMANDS_DIR/goal.md" <<'CMDEOF'
 ---

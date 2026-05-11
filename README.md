@@ -20,7 +20,7 @@ cd ~/Codes/claude-goal
 ./install.sh
 ```
 
-This installs the skill to `~/config.d/claude/skills/goal/` (default). To choose a different location:
+This installs the skill to `~/.claude/skills/goal/` (default). To choose a different location:
 
 ```bash
 ./install.sh --prefix ~/my/skills/goal
@@ -71,7 +71,6 @@ claude-goal/
 │   ├── template.md           # Goal file template with {{started}}/{{workdir}} tokens
 │   └── bin/
 │       ├── goal              # Helper script (4 verbs)
-│       └── session-start.sh  # SessionStart hook (silent unless active goal exists)
 │       ├── session-start.sh  # SessionStart hook (silent unless active goal exists)
 │       └── stop-hook.sh      # Stop hook (auto-resumes active goal, per-session counter)
 └── tests/
@@ -116,8 +115,7 @@ To break out: Ctrl+C. To reset the counter: `rm .claude/goals/.stop-count.*`
 ## Uninstall
 
 ```bash
-rm -rf ~/config.d/claude/skills/goal    # Remove installed skill
-rm ~/.claude/skills/goal                # Remove symlink
+rm -rf ~/.claude/skills/goal            # Remove installed skill
 rm ~/.claude/commands/goal.md           # Remove slash command
 # Then remove the SessionStart and Stop hooks from ~/.claude/settings.json
 ```
