@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+GOAL_DIR="./.claude/goals"
+SKILL_ROOT="${GOAL_SKILL_ROOT:-__SKILL_ROOT__}"
+TEMPLATE="$SKILL_ROOT/template.md"
+
+die() { echo "error: $1" >&2; exit "${2:-1}"; }
+ensure_dir() { mkdir -p "$GOAL_DIR"; }
+
+cmd_active() {
+  local link="$GOAL_DIR/_active"
+  [ -L "$link" ] || exit 1
+  local target
+  target="$(readlink -f "$link" 2>/dev/null)" || exit 1
+  [ -f "$target" ] || die "_active points to missing file: $target" 2
+  basename "$target" .md
+}
+
+cmd_new() {
+  local slug="${1:-}"
+  [ -n "$slug" ] || die "usage: goal new <slug>" 5
+  [[ "$slug" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]] || die "invalid slug (kebab-case lowercase only): $slug" 5
+  ensure_dir
+  local target="$GOAL_DIR/$slug.md"
+  [ ! -e "$target" ] || die "goal file already exists: $target" 3
+
+  local link="$GOAL_DIR/_active"
+  if [ -L "$link" ]; then
+    local existing
+    existing="$(readlink "$link")"
+    if [ -n "$existing" ] && [ -f "$GOAL_DIR/$existing" ]; then
+      die "another active goal exists: ${existing%.md} (archive it first)" 4
+    fi
+    die "_active symlink is broken; remove it manually before creating a new goal" 4
+  fi
+
+  [ -f "$TEMPLATE" ] || die "template not found at $TEMPLATE" 1
+
+  local started workdir
+  started="$(date -Iseconds)"
+  workdir="$(pwd)"
+  sed -e "s|{{started}}|$started|g" -e "s|{{workdir}}|$workdir|g" "$TEMPLATE" > "$target"
+  ln -s "$slug.md" "$link"
+  rm -f "$GOAL_DIR"/.stop-count.* 2>/dev/null
+  echo "created $target, _active → $slug.md"
+}
+
+cmd_archive() {
+  local slug="${1:-}" status="${2:-}"
+  [ -n "$slug" ] || die "usage: goal archive <slug> <done|cleared|abandoned>" 7
+  case "$status" in
+    done|cleared|abandoned) ;;
+    *) die "status must be one of: done, cleared, abandoned (got '$status')" 7 ;;
+  esac
+  local src="$GOAL_DIR/$slug.md" dst="$GOAL_DIR/$slug.$status.md"
+  [ -f "$src" ] || die "no such goal: $src" 6
+
+  local link="$GOAL_DIR/_active"
+  if [ -L "$link" ] && [ "$(readlink "$link")" = "$slug.md" ]; then
+    rm "$link"
+  fi
+  mv "$src" "$dst"
+  rm -f "$GOAL_DIR"/.stop-count.* 2>/dev/null
+  echo "archived $slug.md → $slug.$status.md"
+}
+
+cmd_list() {
+  if [ ! -d "$GOAL_DIR" ]; then
+    echo "no goals"
+    return 0
+  fi
+  shopt -s nullglob
+  local files=("$GOAL_DIR"/*.md)
+  if [ "${#files[@]}" -eq 0 ]; then
+    echo "no goals"
+    return 0
+  fi
+  local f base status started
+  for f in "${files[@]}"; do
+    base="$(basename "$f" .md)"
+    case "$base" in
+      *.done)
+        echo "DONE    ${base%.done}"
+        ;;
+      *.cleared)
+        echo "CLR     ${base%.cleared}"
+        ;;
+      *.abandoned)
+        echo "ABDN    ${base%.abandoned}"
+        ;;
+      *)
+        status="$(grep -m1 '^- \*\*Status\*\*:' "$f" 2>/dev/null | sed 's/.*Status\*\*: //' || true)"
+        started="$(grep -m1 '^- \*\*Started\*\*:' "$f" 2>/dev/null | sed 's/.*Started\*\*: //' || true)"
+        printf "ACTIVE  %-30s status=%s    started=%s\n" "$base" "$status" "$started"
+        ;;
+    esac
+  done
+}
+
+case "${1:-}" in
+  active)  cmd_active ;;
+  new)     shift; cmd_new "$@" ;;
+  archive) shift; cmd_archive "$@" ;;
+  list)    cmd_list ;;
+  -h|--help|"") cat <<EOF
+usage:
+  goal active                          - print active goal slug (exit 1 if none)
+  goal new <slug>                      - create a new active goal from template
+  goal archive <slug> <done|cleared|abandoned>
+                                       - archive a goal, clear _active if applicable
+  goal list                            - list all goals grouped by status
+EOF
+;;
+  *) die "unknown command: $1" 1 ;;
+esac
