@@ -92,7 +92,8 @@ Template:
 ## Slash forms
 
 - `/goal <objective>` — start. Walk the user through the five fields, write the file, begin checkpoint 1.
-- `/goal` (no args) — read active file, report current checkpoint, last verified, remaining work, blockers.
+- `/goal` (no args) — read active file, report current checkpoint, last verified, remaining work, blockers. Write `.claude/goals/.skip-stop` before ending turn so the stop hook does not re-engage the goal.
+- `/goal list` — list all goals. Write `.claude/goals/.skip-stop` before ending turn.
 - `/goal pause` — set `Status: paused`, log reason, stop work.
 - `/goal resume` — re-read the file, continue from next unchecked checkpoint.
 - `/goal clear` — confirm with user, then archive to `<slug>.cleared.md`.

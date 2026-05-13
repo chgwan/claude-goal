@@ -9,6 +9,13 @@ MAX_RESUME="${GOAL_MAX_RESUME:-30}"
 SESSION_ID="$(sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)"
 SESSION_ID="${SESSION_ID:-default}"
 
+# Step 0: skip marker (set by goal list/status to avoid blocking on queries)
+SKIP_FILE="$GOAL_DIR/.skip-stop"
+if [ -f "$SKIP_FILE" ]; then
+  rm -f "$SKIP_FILE"
+  exit 0
+fi
+
 # Step 1: active goal exists?
 [ -L "$GOAL_DIR/_active" ] || exit 0
 TARGET="$(readlink -f "$GOAL_DIR/_active" 2>/dev/null)" || exit 0
