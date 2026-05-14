@@ -43,6 +43,14 @@ cmd_new() {
   sed -e "s|{{started}}|$started|g" -e "s|{{workdir}}|$workdir|g" "$TEMPLATE" > "$target"
   ln -s "$slug.md" "$link"
   rm -f "$GOAL_DIR"/.stop-count.* 2>/dev/null
+
+  # Create session-scoped running marker for stop-hook
+  if [ -f "$GOAL_DIR/.current-session" ]; then
+    local sid
+    sid="$(cat "$GOAL_DIR/.current-session")"
+    touch "$GOAL_DIR/.running.$sid"
+  fi
+
   echo "created $target, _active → $slug.md"
 }
 
@@ -62,6 +70,7 @@ cmd_archive() {
   fi
   mv "$src" "$dst"
   rm -f "$GOAL_DIR"/.stop-count.* 2>/dev/null
+  rm -f "$GOAL_DIR"/.running.* 2>/dev/null
   echo "archived $slug.md → $slug.$status.md"
 }
 

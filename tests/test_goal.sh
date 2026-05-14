@@ -154,6 +154,7 @@ mk_test_dir() {
 
 # T17: stop hook blocks when active goal exists
 ( d="$(mk_test_dir)"; trap "rm -rf $d" EXIT; cd "$d"
+  mkdir -p .claude/goals && echo "t17" > .claude/goals/.current-session
   "$GOAL_BIN" new stop-test >/dev/null
   out="$(echo '{"session_id":"t17"}' | "$STOP_HOOK_BIN")"; rc=$?
   if [ "$rc" = "0" ]; then pass "T17: stop hook exit 0"
@@ -164,6 +165,7 @@ mk_test_dir() {
 
 # T18: stop hook allows stop when counter >= GOAL_MAX_RESUME
 ( d="$(mk_test_dir)"; trap "rm -rf $d" EXIT; cd "$d"
+  mkdir -p .claude/goals && echo "t18" > .claude/goals/.current-session
   "$GOAL_BIN" new max-test >/dev/null
   echo 3 > .claude/goals/.stop-count.t18
   out="$(echo '{"session_id":"t18"}' | GOAL_MAX_RESUME=3 "$STOP_HOOK_BIN" 2>&1)"; rc=$?

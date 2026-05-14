@@ -1,18 +1,16 @@
 #!/usr/bin/env bash
-# SessionStart hook for the `goal` skill. Silent unless ./.claude/goals/_active resolves.
+# SessionStart hook for the `goal` skill.
+# Extracts session ID from stdin JSON and writes to .current-session.
 # Errors swallowed — never breaks a session.
 
-ACTIVE="$PWD/.claude/goals/_active"
-[ -L "$ACTIVE" ] || exit 0
-TARGET="$(readlink -f "$ACTIVE" 2>/dev/null)" || exit 0
-[ -f "$TARGET" ] || exit 0
+GOAL_DIR="$PWD/.claude/goals"
 
-SLUG="$(basename "$TARGET" .md)"
-STATUS="$(grep -m1 '^- \*\*Status\*\*:' "$TARGET" 2>/dev/null | sed 's/.*Status\*\*: //' || echo unknown)"
-DONE="$(grep -c '^- \[x\]' "$TARGET" 2>/dev/null || true)"
-TOTAL="$(grep -cE '^- \[[ x]\]' "$TARGET" 2>/dev/null || true)"
-DONE="${DONE:-0}"
-TOTAL="${TOTAL:-0}"
+# Extract session_id from stdin JSON
+SESSION_ID="$(sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)"
+SESSION_ID="${SESSION_ID:-default}"
 
-echo "[goal] active: $SLUG (status: $STATUS, $DONE/$TOTAL ckpts) — re-read ./.claude/goals/$SLUG.md before acting."
+# Write current session ID for `goal new` to read
+mkdir -p "$GOAL_DIR" 2>/dev/null
+echo "$SESSION_ID" > "$GOAL_DIR/.current-session"
+
 exit 0

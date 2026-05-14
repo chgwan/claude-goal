@@ -15,7 +15,7 @@ Claude-Code analogue of Codex's `/goal`. Good for migrations, large refactors, e
 
 This skill enforces discipline **within a single assistant turn**, not autonomous work across turns. Claude Code ends each turn and waits for the next user message — "work until done" is bounded by the turn, not by Codex-style background autonomy.
 
-For cross-turn autonomy, a Stop hook automatically re-invokes the active goal when Claude stops mid-task. The hook reads `./.claude/goals/_active`, blocks the stop, and injects a re-entry prompt. A per-session counter file caps re-entries at 30 (configurable via `GOAL_MAX_RESUME`). When the goal is archived or replaced, counters reset. This gives you hours-long autonomous execution when combined with skip-permissions — the agent keeps re-engaging the goal until validation passes or the counter limit is hit.
+For cross-turn autonomy, a Stop hook re-engages the active goal — but **only in the session that invoked `/goal`**. On session start, the hook writes the session ID to `.claude/goals/.current-session`. When `goal new` runs, it reads that ID and creates `.claude/goals/.running.<SESSION_ID>`. The stop-hook only blocks if that file exists for its own session. Other sessions are unaffected. A per-session counter file caps re-entries at 30 (configurable via `GOAL_MAX_RESUME`). When the goal is archived or replaced, all session markers and counters are cleaned up.
 
 ## When to use
 

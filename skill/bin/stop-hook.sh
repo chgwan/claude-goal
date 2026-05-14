@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stop hook for the `goal` skill. Blocks stop if an active goal is in progress.
+# Stop hook for the `goal` skill. Blocks stop only in the session that started the goal.
 # Errors swallowed — never breaks a session.
 
 GOAL_DIR="$PWD/.claude/goals"
@@ -16,15 +16,19 @@ if [ -f "$SKIP_FILE" ]; then
   exit 0
 fi
 
+# Step 0b: only block if THIS session is the goal session
+RUNNING_FILE="$GOAL_DIR/.running.$SESSION_ID"
+[ -f "$RUNNING_FILE" ] || exit 0
+
 # Step 1: active goal exists?
-[ -L "$GOAL_DIR/_active" ] || exit 0
-TARGET="$(readlink -f "$GOAL_DIR/_active" 2>/dev/null)" || exit 0
-[ -f "$TARGET" ] || exit 0
+[ -L "$GOAL_DIR/_active" ] || { rm -f "$RUNNING_FILE"; exit 0; }
+TARGET="$(readlink -f "$GOAL_DIR/_active" 2>/dev/null)" || { rm -f "$RUNNING_FILE"; exit 0; }
+[ -f "$TARGET" ] || { rm -f "$RUNNING_FILE"; exit 0; }
 
 # Step 2: already archived?
 BASENAME="$(basename "$TARGET")"
 case "$BASENAME" in
-  *.done.md|*.cleared.md|*.abandoned.md) exit 0 ;;
+  *.done.md|*.cleared.md|*.abandoned.md) rm -f "$RUNNING_FILE"; exit 0 ;;
 esac
 
 # Step 3-4: per-session counter
@@ -36,6 +40,7 @@ echo "$COUNT" > "$COUNT_FILE"
 # Step 5: max exceeded?
 if [ "$COUNT" -ge "$MAX_RESUME" ]; then
   echo "[goal] max resume count ($MAX_RESUME) reached — stopping. Reset with: rm $COUNT_FILE" >&2
+  rm -f "$RUNNING_FILE"
   exit 0
 fi
 
